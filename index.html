@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scale</title>
+    <style>
+        html {
+            font-family: sans-serif;
+            background: #e6e7e8;
+        }
+
+        #modeContainer button {
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            margin-left: 5px;
+            margin-right: 5px;
+            min-width: 100px;
+        }
+
+        #tonicContainer button {
+            display: inline-block;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            margin-left: 5px;
+            margin-right: 5px;
+            min-width: 3em;
+        }
+
+        button.active {
+            background: skyblue;
+        }
+
+        #scaleNotes {
+            font-size: xx-large;
+            font-family: serif;
+        }
+
+        #scaleNotes div.note {
+            width: 1.5em;
+            display: inline-block;
+        }
+
+        .card {
+            background: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-shadow: 5px 5px 5px lightgrey;
+            position: relative;
+            border-radius: 0.4em;
+        }
+
+        .skeuButton {
+            background: white;
+            color: black;
+            box-shadow: 2px 2px 4px #80808080, -2px -2px 4px #ffffff6b;
+            border-radius: 0.4em;
+            border: 1px solid rgb(237, 237, 237);
+            /* transition: border 0.5s; */
+            cursor: pointer;
+            user-select: none;
+            padding: 7px;
+        }
+
+        .skeuButton:active {
+            color: darkblue;
+            box-shadow: inset 2px 2px 4px #80808080, inset -2px -2px 4px #ffffff6b;
+        }
+
+        .skeuButton:disabled {
+            color: lightgray;
+        }
+
+        .skeuButton:hover {
+            border: 1px solid rgb(217, 217, 217);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="tonicContainer" class="card"></div>
+
+    <div id="modeContainer" class="card"></div>
+
+    <div id="scaleNotes" class="card"></div>
+
+    <div id="staveContainer" class="card"></div>
+
+</body>
+<script>
+    'use strict'
+
+    function playNoteByName(noteName) {
+        `
+        Plays a note given a name, e.g. A4 or C♯3
+        Will let you get away with using # instead of ♯
+        Assumes you have an audio context called audioCtx
+        `
+        var noteFrequency = getFrequencyFromNoteName(noteName)
+
+        // for reference
+        // you can make a kickdrum with
+        // oscillator.frequency.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.5)
+
+        var oscillator = audioCtx.createOscillator();
+        oscillator.type = waveform ? waveform : "sine";
+        oscillator.frequency.setValueAtTime(noteFrequency, audioCtx.currentTime); // value in hertz
+
+        oscillator.connect(mainGainNode);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + stepDuration);
+    }
+
+    function initAudioContext() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            mainGainNode = audioCtx.createGain();
+            mainGainNode.connect(audioCtx.destination);
+            mainGainNode.gain.value = volume;
+        }
+    }
+
+    function getFrequencyFromNoteName(noteName) {
+        `
+        Gets frequency in Hz for a note given a name, e.g. A4 or C♯3
+        Will let you get away with using # instead of ♯
+        Breaks above G#9 because of the assumption that the octave is always a single digit
+        `
+        var note = noteName.slice(0, noteName.length - 1).replace("#", "♯")
+        var octave = parseInt(noteName.slice(noteName.length - 1))
+        var noteIdx = chromaticScale.indexOf(note)
+
+        var noteValueRelativeToA4 = noteIdx + (12 * (octave - 4))
+        var noteFrequency = (2 ** (noteValueRelativeToA4 / 12)) * 440
+
+        return noteFrequency
+    }
+
+    function playChordArray(chordArray) {
+        if (!chordArray.length) {
+            return
+        }
+        chordArray.map(x => playNoteByName(x))
+    }
+
+    function getScale(inputMode, inputTonic) {
+        var [degree, intervals] = modes[inputMode]
+        var returnScaleArray = []
+
+        var currentNote = inputTonic
+
+        returnScaleArray.push(currentNote)
+
+        for (var i = 0; i < intervals.length; i++) {
+            var tempInterval = intervals[i]
+            var currentNote = chromaticScale[(chromaticScale.indexOf(currentNote) + tempInterval) % chromaticScale.length]
+            returnScaleArray.push(currentNote)
+        }
+
+        return returnScaleArray
+    }
+
+    function initModeButtons() {
+        var modeCtn = document.getElementById("modeContainer")
+        for (var i in modes) {
+            var elm = document.createElement("button")
+            elm.innerHTML = i
+            elm.onclick = function () { currentMode = this.innerHTML; highlightActiveTonicAndMode(); initAudioContext(); playScale() }
+            elm.dataset.mode = i
+            elm.classList.add("skeuButton")
+            modeCtn.appendChild(elm)
+        }
+    }
+
+    function initTonicButtons() {
+        var tonicCtn = document.getElementById("tonicContainer")
+
+        for (var i = 3; i < chromaticScale.length + 3; i++) {
+            var tempElm = document.createElement("button")
+            tempElm.value = chromaticScale[i % chromaticScale.length]
+            tempElm.innerHTML = chromaticScale[i % chromaticScale.length]
+            tempElm.onclick = function () { currentTonic = this.innerHTML; highlightActiveTonicAndMode(); initAudioContext(); playScale() }
+            tempElm.dataset.tonic = chromaticScale[i % chromaticScale.length]
+            tempElm.classList.add("skeuButton")
+            tonicCtn.appendChild(tempElm)
+        }
+    }
+
+    function highlightActiveTonicAndMode() {
+        [...document.getElementsByClassName("active")].forEach(x => x.classList.remove("active"))
+
+        document.querySelector(`[data-mode=${currentMode}]`).classList.add("active")
+        document.querySelector(`[data-tonic=${currentTonic}]`).classList.add("active")
+    }
+
+    function playScale() {
+        currentScale = getScale(currentMode, currentTonic)
+
+        drawStave();
+
+        addOctavesToScaleArray(currentScale).forEach((x, i) =>
+            setTimeout(playNoteByName, i * stepDuration * 1000, x)
+        )
+    }
+
+    function addOctavesToScaleArray(inputScale) {
+        var octave = chromaticScale.slice(3).includes(inputScale[0]) ? 4 : 5
+
+        function doThing(x, i) {
+            if (chromaticScale.indexOf(x) < chromaticScale.indexOf(currentScale[i - 1])) {
+                octave++
+            };
+            return `${x}${octave}`
+        }
+
+        return inputScale.map((x, i) =>
+            doThing(x, i)
+        )
+    }
+
+    function drawStave() {
+        var staveSvgElm = document.createElementNS(svgNS, "svg")
+        var svgWidth = 500
+        var svgHeight = 250
+
+        if (document.getElementById("theStave")) {
+            document.getElementById("theStave").remove()
+        }
+
+        staveSvgElm.setAttribute("width", svgWidth)
+        staveSvgElm.setAttribute("height", svgHeight)
+        staveSvgElm.id = "theStave"
+
+        // relative y co-ords scaled to 1
+        var yCoords = [5, 4, 3, 2, 1].map(x => (x + 2) / 10)
+
+        // draw the lines on the stave
+        for (var i = 0; i < yCoords.length; i++) {
+            var lineElm = document.createElementNS(svgNS, "line")
+            lineElm.setAttribute("x1", 0)
+            lineElm.setAttribute("x2", svgWidth)
+            lineElm.setAttribute("y1", (yCoords[i] * svgHeight))
+            lineElm.setAttribute("y2", (yCoords[i] * svgHeight))
+            lineElm.setAttribute("stroke-width", "2")
+            lineElm.setAttribute("stroke", "black")
+
+            staveSvgElm.appendChild(lineElm)
+        }
+
+        // relative x co-ords scaled to 1
+        var noteXCoords = [1, 2, 3, 4, 5, 6, 7, 8].map(x => x / 9)
+        var halfLineHeight = 0.5 * (yCoords[0] - yCoords[1])
+
+        // note y co-ords
+        var noteYCoords = {
+            "C4": yCoords[0] + (2 * halfLineHeight),
+            "C♯4": yCoords[0] + (2 * halfLineHeight),
+            "D4": yCoords[0] + (1 * halfLineHeight),
+            "D♯4": yCoords[0] + (1 * halfLineHeight),
+            "E4": yCoords[0],
+            "F4": yCoords[0] - (1 * halfLineHeight),
+            "F♯4": yCoords[0] - (1 * halfLineHeight),
+            "G4": yCoords[0] - (2 * halfLineHeight),
+            "G♯4": yCoords[0] - (2 * halfLineHeight),
+            "A5": yCoords[0] - (3 * halfLineHeight),
+            "A♯5": yCoords[0] - (3 * halfLineHeight),
+            "B5": yCoords[0] - (4 * halfLineHeight),
+            "C5": yCoords[0] - (5 * halfLineHeight),
+            "C♯5": yCoords[0] - (5 * halfLineHeight),
+            "D5": yCoords[0] - (6 * halfLineHeight),
+            "D♯5": yCoords[0] - (6 * halfLineHeight),
+            "E5": yCoords[0] - (7 * halfLineHeight),
+            "F5": yCoords[0] - (8 * halfLineHeight),
+            "F♯5": yCoords[0] - (8 * halfLineHeight),
+            "G5": yCoords[0] - (9 * halfLineHeight),
+            "G♯5": yCoords[0] - (9 * halfLineHeight),
+            "A6": yCoords[0] - (10 * halfLineHeight),
+            "A♯6": yCoords[0] - (10 * halfLineHeight),
+            "B6": yCoords[0] - (11 * halfLineHeight)
+        }
+
+        var notesWithOctaves = addOctavesToScaleArray(currentScale)
+
+        // draw the note bodies on the stave
+        for (var i = 0; i < notesWithOctaves.length; i++) {
+            var tempNote = notesWithOctaves[i]
+            var circElm = document.createElementNS(svgNS, "circle")
+            var cx = svgWidth * noteXCoords[i]
+            var cy = svgHeight * noteYCoords[tempNote]
+            circElm.setAttribute("cx", cx)
+            circElm.setAttribute("cy", cy)
+            circElm.setAttribute("r", 10)
+            circElm.setAttribute("stroke-width", "2")
+            circElm.setAttribute("stroke", "black")
+            circElm.dataset.note = tempNote
+
+            staveSvgElm.appendChild(circElm)
+        }
+
+        document.getElementById("staveContainer").appendChild(staveSvgElm)
+    }
+
+    function displayNotesOfScale() {
+        document.getElementById("scaleNotes").innerHTML = "<div class='note'>" + currentScale.join("</div><div class='note'>") + "</div>"
+    }
+
+
+
+    // globals
+    const chromaticScale = ["A", "A♯", "B", "C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯"]
+    var audioCtx
+    var mainGainNode
+    var volume = 0.15
+    var waveform = "sine"
+    var stepDuration = 0.2
+    var currentMode = "Ionian"
+    var currentScale
+    var currentTonic = "C"
+    const svgNS = "http://www.w3.org/2000/svg"
+    // you can actually generate these by rotating the first one
+    const modes = {
+        "Ionian": ["I", [2, 2, 1, 2, 2, 2, 1]],
+        "Dorian": ["ii", [2, 1, 2, 2, 2, 1, 2]],
+        "Phrygian": ["iii", [1, 2, 2, 2, 1, 2, 2]],
+        "Lydian": ["IV", [2, 2, 2, 1, 2, 2, 1]],
+        "Mixolydian": ["V", [2, 2, 1, 2, 2, 1, 2]],
+        "Aeolian": ["vi", [2, 1, 2, 2, 1, 2, 2]],
+        "Locrian": ["viiø", [1, 2, 2, 1, 2, 2, 2]]
+    }
+
+    // init
+    function init() {
+        currentScale = getScale(currentMode, currentTonic)
+
+        initTonicButtons();
+        initModeButtons();
+        highlightActiveTonicAndMode();
+        drawStave();
+        displayNotesOfScale();
+    }
+
+    init();
+
+</script>
+
+</html>
