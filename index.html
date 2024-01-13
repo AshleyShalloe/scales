@@ -285,7 +285,7 @@
 
         var notesWithOctaves = addOctavesToScaleArray(currentScale)
 
-        // draw the note bodies on the stave
+        // draw the notes
         for (var i = 0; i < notesWithOctaves.length; i++) {
             var tempNote = notesWithOctaves[i]
             var circElm = document.createElementNS(svgNS, "circle")
@@ -294,6 +294,7 @@
             var isSharp = tempNote.includes("♯")
             var noteRadius = 10
 
+            // draw the note bodies on the stave
             circElm.setAttribute("cx", cx)
             circElm.setAttribute("cy", cy)
             circElm.setAttribute("r", noteRadius)
@@ -303,14 +304,27 @@
 
             staveSvgElm.appendChild(circElm)
 
+            // add the sharps naively
             if (isSharp){
                 var textElm = document.createElementNS(svgNS, "text")
-                textElm.setAttribute("x", cx + (1.1*noteRadius))
+                textElm.setAttribute("x", cx - (2.5*noteRadius))
                 textElm.setAttribute("y", cy)
                 textElm.textContent = "♯"
                 textElm.setAttribute("style", "font-size: 30px; font-weight: bold")
                 staveSvgElm.appendChild(textElm)
             }
+
+            // draw the stalks
+            var stalkElm = document.createElementNS(svgNS, "line")
+
+            stalkElm.setAttribute("x1", cx+noteRadius)
+            stalkElm.setAttribute("x2", cx+noteRadius)
+            stalkElm.setAttribute("y1", cy)
+            stalkElm.setAttribute("y2", cy > (0.5 * svgHeight) ? cy-60 : cy+60)
+            stalkElm.setAttribute("stroke-width", "2")
+            stalkElm.setAttribute("stroke", "black")
+
+            staveSvgElm.appendChild(stalkElm)
         }
 
         document.getElementById("staveContainer").appendChild(staveSvgElm)
