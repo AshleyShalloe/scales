@@ -12,21 +12,25 @@
         }
 
         #modeContainer button {
-            display: block;
-            margin-top: 10px;
-            margin-bottom: 10px;
-            margin-left: 5px;
-            margin-right: 5px;
             min-width: 100px;
         }
 
         #tonicContainer button {
-            display: inline-block;
+            min-width: 3em;
+        }
+
+        #staveContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        button {
             margin-top: 10px;
             margin-bottom: 10px;
             margin-left: 5px;
             margin-right: 5px;
-            min-width: 3em;
+            display: inline-block;
         }
 
         button.active {
@@ -50,6 +54,7 @@
             box-shadow: 5px 5px 5px lightgrey;
             position: relative;
             border-radius: 0.4em;
+            text-align: center;
         }
 
         .skeuButton {
@@ -76,18 +81,44 @@
         .skeuButton:hover {
             border: 1px solid rgb(217, 217, 217);
         }
+
+        #theStave {
+            max-width: 100%;
+        }
+
+        h2 {
+            padding: 0px;
+            margin: 0px;
+        }
+
+        .triadButton::first-letter {
+            text-transform: capitalize;
+        }
     </style>
 </head>
 
 <body>
 
-    <div id="tonicContainer" class="card"></div>
+    <div id="tonicContainer" class="card">
+        <h2>Tonic</h2>
+    </div>
 
-    <div id="modeContainer" class="card"></div>
+    <div id="modeContainer" class="card">
+        <h2>Mode</h2>
+    </div>
 
-    <div id="scaleNotes" class="card"></div>
+    <div id="scaleNotesContainer" class="card">
+        <h2>Scale</h2>
+        <div id="scaleNotes"></div>
+    </div>
 
-    <div id="staveContainer" class="card"></div>
+    <div id="staveContainer" class="card">
+        <h2>Staff</h2>
+    </div>
+
+    <div id="triadContainer" class="card">
+        <h2>Tonic triad</h2>
+    </div>
 
 </body>
 <script>
@@ -305,9 +336,9 @@
             staveSvgElm.appendChild(circElm)
 
             // add the sharps naively
-            if (isSharp){
+            if (isSharp) {
                 var textElm = document.createElementNS(svgNS, "text")
-                textElm.setAttribute("x", cx - (2.5*noteRadius))
+                textElm.setAttribute("x", cx - (2.5 * noteRadius))
                 textElm.setAttribute("y", cy)
                 textElm.textContent = "♯"
                 textElm.setAttribute("style", "font-size: 30px; font-weight: bold")
@@ -317,10 +348,10 @@
             // draw the stalks
             var stalkElm = document.createElementNS(svgNS, "line")
 
-            stalkElm.setAttribute("x1", cx+noteRadius)
-            stalkElm.setAttribute("x2", cx+noteRadius)
+            stalkElm.setAttribute("x1", cx + noteRadius)
+            stalkElm.setAttribute("x2", cx + noteRadius)
             stalkElm.setAttribute("y1", cy)
-            stalkElm.setAttribute("y2", cy > (0.5 * svgHeight) ? cy-60 : cy+60)
+            stalkElm.setAttribute("y2", cy > (0.5 * svgHeight) ? cy - 60 : cy + 60)
             stalkElm.setAttribute("stroke-width", "2")
             stalkElm.setAttribute("stroke", "black")
 
@@ -332,6 +363,44 @@
 
     function displayNotesOfScale() {
         document.getElementById("scaleNotes").innerHTML = "<div class='note'>" + currentScale.join("</div><div class='note'>") + "</div>"
+    }
+
+    function getTonicTriad() {
+        var root = currentTonic
+        var minorThird = chromaticScale[(chromaticScale.indexOf(root) + 3) % chromaticScale.length]
+        var majorThird = chromaticScale[(chromaticScale.indexOf(root) + 4) % chromaticScale.length]
+        var diminishedFifth = chromaticScale[(chromaticScale.indexOf(root) + 6) % chromaticScale.length]
+        var perfectFifth = chromaticScale[(chromaticScale.indexOf(root) + 7) % chromaticScale.length]
+        var augmentedFifth = chromaticScale[(chromaticScale.indexOf(root) + 8) % chromaticScale.length]
+
+        return {
+            "major": [root, majorThird, perfectFifth],
+            "minor": [root, minorThird, perfectFifth],
+            "diminished": [root, minorThird, diminishedFifth],
+            "augmented": [root, majorThird, augmentedFifth]
+        }
+    }
+
+    function displayTonicTriad() {
+        var triadObj = getTonicTriad()
+        var triadCtn = document.getElementById("triadContainer")
+        var triadOrder = ["major", "minor", "diminished", "augmented"]
+
+        for (var i = 0; i < triadOrder.length; i++) {
+            var tempButton = document.createElement("button")
+            var tempTriad = triadObj[triadOrder[i]]
+
+            tempButton.onclick = function () { initAudioContext(); playTriad(this.innerHTML) }
+            tempButton.innerHTML = triadOrder[i]
+            tempButton.classList.add("skeuButton", "triadButton")
+            triadCtn.appendChild(tempButton)
+        }
+    }
+
+    function playTriad(triadType) {
+        var triadArray = getTonicTriad()[triadType]
+
+        playChordArray(triadArray.map(x => `${x}4`))
     }
 
 
@@ -367,6 +436,7 @@
         highlightActiveTonicAndMode();
         drawStave();
         displayNotesOfScale();
+        displayTonicTriad();
     }
 
     init();
