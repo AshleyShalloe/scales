@@ -120,6 +120,10 @@
         <h2>Tonic triad</h2>
     </div>
 
+    <div id="seventhContainer" class="card">
+        <h2>Tonic seventh chord</h2>
+    </div>
+
 </body>
 <script>
     'use strict'
@@ -373,11 +377,19 @@
         var perfectFifth = chromaticScale[(chromaticScale.indexOf(root) + 7) % chromaticScale.length]
         var augmentedFifth = chromaticScale[(chromaticScale.indexOf(root) + 8) % chromaticScale.length]
 
+        // other intervals
+        var majorSeventh = chromaticScale[(chromaticScale.indexOf(root) + 11) % chromaticScale.length]
+        var minorSeventh = chromaticScale[(chromaticScale.indexOf(root) + 10) % chromaticScale.length]
+
         return {
             "major": [root, majorThird, perfectFifth],
             "minor": [root, minorThird, perfectFifth],
             "diminished": [root, minorThird, diminishedFifth],
-            "augmented": [root, majorThird, augmentedFifth]
+            "augmented": [root, majorThird, augmentedFifth],
+            "otherIntervals": {
+                "majorSeventh": majorSeventh,
+                "minorSeventh": minorSeventh
+            }
         }
     }
 
@@ -397,10 +409,45 @@
         }
     }
 
-    function playTriad(triadType) {
+    function displayTonicSevenths() {
+        var triadObj = getTonicTriad()
+        var triadCtn = document.getElementById("seventhContainer")
+        var triadOrder = ["major", "minor", "diminished", "augmented"]
+
+        for (var i = 0; i < triadOrder.length; i++) {
+            var tempButton = document.createElement("button")
+            var tempTriad = triadObj[triadOrder[i]]
+
+            tempButton.onclick = function () { initAudioContext(); playTriad(this.innerHTML, true) }
+            tempButton.innerHTML = triadOrder[i]
+            tempButton.classList.add("skeuButton", "triadButton")
+            triadCtn.appendChild(tempButton)
+        }
+    }
+
+    function playTriad(triadType, addSeventh) {
         var triadArray = getTonicTriad()[triadType]
 
+        // optionally add a seventh to the triad
+        // apparently the default is a minor seventh so we'll do that
+        if (addSeventh){
+            triadArray.push(getTonicTriad()["otherIntervals"]["minorSeventh"])
+        }
+
+        triadArray.filter(x => currentScale.includes(x)).forEach(x => highlightNote(x, stepDuration*1000))
+
         playChordArray(triadArray.map(x => `${x}4`))
+    }
+
+    function highlightNote(noteName, timeout){
+        document.querySelector(`[data-note=${noteName}4]`).style.fill = "skyblue"
+
+        if (timeout){
+            setTimeout(
+                function(){document.querySelector(`[data-note=${noteName}4]`).style.fill = "black"},
+                timeout
+            )
+        }
     }
 
 
@@ -437,6 +484,7 @@
         drawStave();
         displayNotesOfScale();
         displayTonicTriad();
+        displayTonicSevenths();
     }
 
     init();
