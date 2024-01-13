@@ -200,6 +200,7 @@
         currentScale = getScale(currentMode, currentTonic)
 
         drawStave();
+        displayNotesOfScale();
 
         addOctavesToScaleArray(currentScale).forEach((x, i) =>
             setTimeout(playNoteByName, i * stepDuration * 1000, x)
@@ -290,14 +291,26 @@
             var circElm = document.createElementNS(svgNS, "circle")
             var cx = svgWidth * noteXCoords[i]
             var cy = svgHeight * noteYCoords[tempNote]
+            var isSharp = tempNote.includes("♯")
+            var noteRadius = 10
+
             circElm.setAttribute("cx", cx)
             circElm.setAttribute("cy", cy)
-            circElm.setAttribute("r", 10)
+            circElm.setAttribute("r", noteRadius)
             circElm.setAttribute("stroke-width", "2")
             circElm.setAttribute("stroke", "black")
             circElm.dataset.note = tempNote
 
             staveSvgElm.appendChild(circElm)
+
+            if (isSharp){
+                var textElm = document.createElementNS(svgNS, "text")
+                textElm.setAttribute("x", cx + (1.1*noteRadius))
+                textElm.setAttribute("y", cy)
+                textElm.textContent = "♯"
+                textElm.setAttribute("style", "font-size: 30px; font-weight: bold")
+                staveSvgElm.appendChild(textElm)
+            }
         }
 
         document.getElementById("staveContainer").appendChild(staveSvgElm)
