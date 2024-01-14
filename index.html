@@ -11,6 +11,17 @@
             background: #e6e7e8;
         }
 
+        body {
+            margin: 0 auto;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-content: center;
+            justify-content: center;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
         #modeContainer button {
             min-width: 100px;
         }
@@ -23,6 +34,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            overflow-x: auto;
         }
 
         button {
@@ -84,6 +96,7 @@
 
         #theStave {
             max-width: 100%;
+            min-width: 500px;
         }
 
         h2 {
@@ -471,28 +484,28 @@
 
         // optionally add a seventh to the triad
         // apparently the default is a minor seventh so we'll do that
-        if (addSeventh){
+        if (addSeventh) {
             triadArray.push(triadObj["otherIntervals"]["minorSeventh"])
         }
 
-        addOctavesToScaleArray(triadArray.filter(x => currentScale.includes(x))).forEach(x => highlightNote(x, stepDuration*1000))
+        addOctavesToScaleArray(triadArray.filter(x => currentScale.includes(x))).forEach(x => highlightNote(x, stepDuration * 1000))
 
         playChordArray(triadArray.map(x => `${x}4`))
     }
 
-    function highlightNote(noteName, timeout){
+    function highlightNote(noteName, timeout) {
         var targetElm = document.querySelector(`[data-note=${noteName}]`)
-        
-        if (!targetElm){
+
+        if (!targetElm) {
             console.warn(noteName, "not in scale")
             return
         }
 
         targetElm.style.fill = "skyblue"
 
-        if (timeout){
+        if (timeout) {
             setTimeout(
-                function(){targetElm.style.fill = "black"},
+                function () { targetElm.style.fill = "black" },
                 timeout
             )
         }
