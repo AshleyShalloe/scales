@@ -124,6 +124,14 @@
         <h2>Tonic seventh chord</h2>
     </div>
 
+    <div id="dominantContainer" class="card">
+        <h2>Dominant triad</h2>
+    </div>
+
+    <div id="dominantSeventhsContainer" class="card">
+        <h2>Dominant seventh chord</h2>
+    </div>
+
 </body>
 <script>
     'use strict'
@@ -369,8 +377,8 @@
         document.getElementById("scaleNotes").innerHTML = "<div class='note'>" + currentScale.join("</div><div class='note'>") + "</div>"
     }
 
-    function getTonicTriad() {
-        var root = currentTonic
+    function getTonicTriad(useDominantAsRoot) {
+        var root = useDominantAsRoot ? currentScale[5] : currentTonic
         var minorThird = chromaticScale[(chromaticScale.indexOf(root) + 3) % chromaticScale.length]
         var majorThird = chromaticScale[(chromaticScale.indexOf(root) + 4) % chromaticScale.length]
         var diminishedFifth = chromaticScale[(chromaticScale.indexOf(root) + 6) % chromaticScale.length]
@@ -425,26 +433,66 @@
         }
     }
 
-    function playTriad(triadType, addSeventh) {
-        var triadArray = getTonicTriad()[triadType]
+    function displayDominantTriad() {
+        var triadObj = getTonicTriad(true)
+        var triadCtn = document.getElementById("dominantContainer")
+        var triadOrder = ["major", "minor", "diminished", "augmented"]
+
+        for (var i = 0; i < triadOrder.length; i++) {
+            var tempButton = document.createElement("button")
+            var tempTriad = triadObj[triadOrder[i]]
+
+            tempButton.onclick = function () { initAudioContext(); playTriad(this.innerHTML, false, true) }
+            tempButton.innerHTML = triadOrder[i]
+            tempButton.classList.add("skeuButton", "triadButton")
+            triadCtn.appendChild(tempButton)
+        }
+    }
+
+    function displayDominantSevenths() {
+        var triadObj = getTonicTriad(true)
+        var triadCtn = document.getElementById("dominantSeventhsContainer")
+        var triadOrder = ["major", "minor", "diminished", "augmented"]
+
+        for (var i = 0; i < triadOrder.length; i++) {
+            var tempButton = document.createElement("button")
+            var tempTriad = triadObj[triadOrder[i]]
+
+            tempButton.onclick = function () { initAudioContext(); playTriad(this.innerHTML, true, true) }
+            tempButton.innerHTML = triadOrder[i]
+            tempButton.classList.add("skeuButton", "triadButton")
+            triadCtn.appendChild(tempButton)
+        }
+    }
+
+    function playTriad(triadType, addSeventh, useDominantAsRoot) {
+        var triadObj = useDominantAsRoot ? getTonicTriad(true) : getTonicTriad()
+        var triadArray = triadObj[triadType]
 
         // optionally add a seventh to the triad
         // apparently the default is a minor seventh so we'll do that
         if (addSeventh){
-            triadArray.push(getTonicTriad()["otherIntervals"]["minorSeventh"])
+            triadArray.push(triadObj["otherIntervals"]["minorSeventh"])
         }
 
-        triadArray.filter(x => currentScale.includes(x)).forEach(x => highlightNote(x, stepDuration*1000))
+        addOctavesToScaleArray(triadArray.filter(x => currentScale.includes(x))).forEach(x => highlightNote(x, stepDuration*1000))
 
         playChordArray(triadArray.map(x => `${x}4`))
     }
 
     function highlightNote(noteName, timeout){
-        document.querySelector(`[data-note=${noteName}4]`).style.fill = "skyblue"
+        var targetElm = document.querySelector(`[data-note=${noteName}]`)
+        
+        if (!targetElm){
+            console.warn(noteName, "not in scale")
+            return
+        }
+
+        targetElm.style.fill = "skyblue"
 
         if (timeout){
             setTimeout(
-                function(){document.querySelector(`[data-note=${noteName}4]`).style.fill = "black"},
+                function(){targetElm.style.fill = "black"},
                 timeout
             )
         }
@@ -485,6 +533,8 @@
         displayNotesOfScale();
         displayTonicTriad();
         displayTonicSevenths();
+        displayDominantTriad();
+        displayDominantSevenths();
     }
 
     init();
